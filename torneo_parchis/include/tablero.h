@@ -2,6 +2,10 @@
 #define TABLERO_H
 
 #include "tipos.h"
+
+/*
+ * Inicializa las casillas, posiciones de fichas y estado general del juego.
+ */
 void inicializar_tablero(EstadoJuego *estado);
 
 /*
@@ -14,6 +18,10 @@ void imprimir_tablero(EstadoJuego *estado);
  */
 int calcular_destino(EstadoJuego *estado, int jugador, int ficha, int dado);
 
+/*
+ * Mueve una ficha en el tablero compartido.
+ * Retorna VERDADERO si el movimiento se realizó, FALSO si no fue posible.
+ */
 int mover_en_tablero(EstadoJuego *estado, int jugador, int ficha, int dado);
 
 /*
@@ -22,7 +30,7 @@ int mover_en_tablero(EstadoJuego *estado, int jugador, int ficha, int dado);
 int casilla_es_pasillo(int posicion);
 
 /*
- * Indica si una posición representa entrada o zona de meta.
+ * Indica si una posición representa llegada a meta.
  */
 int casilla_es_meta(int posicion);
 
@@ -31,6 +39,9 @@ int casilla_es_meta(int posicion);
  */
 void enviar_ficha_a_base(EstadoJuego *estado, int jugador, int ficha);
 
+/*
+ * Verifica si un jugador ya metió todas sus fichas a meta.
+ */
 int jugador_gano(EstadoJuego *estado, int jugador);
 
 #endif
