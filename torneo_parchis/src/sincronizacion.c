@@ -27,6 +27,11 @@ void inicializar_sincronizacion(EstadoJuego *estado)
         }
     }
 
+    if (pthread_mutex_init(&estado->mutex_estadisticas, &attr) != 0) {
+        perror("Error al inicializar mutex de estadisticas");
+        exit(EXIT_FAILURE);
+    }
+
     pthread_mutexattr_destroy(&attr);
 
     if (sem_init(&estado->sem_meta, 1, CAPACIDAD_META) == -1) {
@@ -45,6 +50,8 @@ void destruir_sincronizacion(EstadoJuego *estado)
     for (int i = 0; i < TAM_TABLERO; i++) {
         pthread_mutex_destroy(&estado->mutex_casilla[i]);
     }
+
+    pthread_mutex_destroy(&estado->mutex_estadisticas);
 
     sem_destroy(&estado->sem_meta);
     sem_destroy(&estado->sem_pasillo);
@@ -118,6 +125,16 @@ void desbloquear_casillas_movimiento(EstadoJuego *estado, int origen, int destin
         desbloquear_casilla(estado, origen);
         desbloquear_casilla(estado, destino);
     }
+}
+
+void bloquear_estadisticas(EstadoJuego *estado)
+{
+    pthread_mutex_lock(&estado->mutex_estadisticas);
+}
+
+void desbloquear_estadisticas(EstadoJuego *estado)
+{
+    pthread_mutex_unlock(&estado->mutex_estadisticas);
 }
 
 void entrar_zona_meta(EstadoJuego *estado)
