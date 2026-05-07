@@ -5,13 +5,18 @@
 #include <semaphore.h>
 
 #include "config.h"
+#include "colores.h"
 
 /*
+ * Representa una casilla del tablero compartido.
+ *
+ * ocupada:
  *   FALSO      -> la casilla está libre
  *   VERDADERO  -> la casilla está ocupada
  *
  * jugador:
  *   ROJO, VERDE, AZUL o AMARILLO.
+ *
  * ficha:
  *   número de ficha del jugador, de 0 a NUM_FICHAS - 1.
  */
@@ -21,6 +26,9 @@ typedef struct {
     int ficha;
 } Casilla;
 
+/*
+ * Estadísticas individuales de cada jugador.
+ */
 typedef struct {
     int movimientos;
     int capturas;
@@ -36,9 +44,16 @@ typedef struct {
  * el proceso padre y los procesos hijos puedan acceder al mismo tablero.
  */
 typedef struct {
+    /*
+     * Tablero compartido.
+     */
     Casilla casillas[TAM_TABLERO];
 
     /*
+     * Posición actual de cada ficha.
+     *
+     * posiciones[jugador][ficha]
+     *
      * Puede valer:
      *   BASE -> la ficha está en la base
      *   0 a TAM_TABLERO - 1 -> la ficha está en el tablero
@@ -76,8 +91,21 @@ typedef struct {
     sem_t sem_meta;
     sem_t sem_pasillo;
 
+    /*
+     * Estado general del juego.
+     *
+     * juego_terminado:
+     *   JUEGO_ACTIVO o JUEGO_TERMINADO.
+     *
+     * ganador:
+     *   SIN_GANADOR o identificador del jugador ganador.
+     */
     int juego_terminado;
     int ganador;
+
+    /*
+     * Contador global de turnos.
+     */
     int turno_actual;
 
 } EstadoJuego;
