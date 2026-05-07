@@ -10,8 +10,17 @@
 #include "colores.h"
 #include "config.h"
 
+static int jugador_valido(int id_jugador)
+{
+    return id_jugador >= 0 && id_jugador < NUM_JUGADORES;
+}
+
 void ejecutar_jugador(int id_jugador, EstadoJuego *estado)
 {
+    if (!jugador_valido(id_jugador) || estado == NULL) {
+        return;
+    }
+
     srand(time(NULL) ^ getpid());
 
     printf("Proceso jugador %s iniciado. PID: %d\n",
@@ -22,6 +31,12 @@ void ejecutar_jugador(int id_jugador, EstadoJuego *estado)
 
     while (estado->juego_terminado == JUEGO_ACTIVO) {
         procesar_turno_jugador(id_jugador, estado);
+
+        /*
+         * Temporal:
+         * se procesa solo un turno hasta integrar el árbitro,
+         * Round Robin y sockets.
+         */
         break;
     }
 
@@ -32,8 +47,9 @@ void procesar_turno_jugador(int id_jugador, EstadoJuego *estado)
 {
     int dado;
     int ficha;
+    FichaContexto ctx_ficha;
 
-    if (id_jugador < 0 || id_jugador >= NUM_JUGADORES) {
+    if (!jugador_valido(id_jugador) || estado == NULL) {
         return;
     }
 
@@ -54,10 +70,15 @@ void procesar_turno_jugador(int id_jugador, EstadoJuego *estado)
                nombre_jugador(id_jugador));
 
         registrar_bloqueo(estado, id_jugador);
+        registrar_turno(estado, id_jugador);
         return;
     }
 
-    if (mover_en_tablero(estado, id_jugador, ficha, dado) == VERDADERO) {
+    ctx_ficha.id_jugador = id_jugador;
+    ctx_ficha.id_ficha = ficha;
+    ctx_ficha.estado = estado;
+
+    if (mover_ficha(&ctx_ficha, dado) == VERDADERO) {
         printf("Jugador %s movio la ficha %d.\n",
                nombre_jugador(id_jugador),
                ficha);
@@ -82,7 +103,11 @@ int seleccionar_ficha(int id_jugador, EstadoJuego *estado, int dado)
     int posicion;
     int destino;
 
-    if (id_jugador < 0 || id_jugador >= NUM_JUGADORES) {
+    if (!jugador_valido(id_jugador) || estado == NULL) {
+        return -1;
+    }
+
+    if (dado < DADO_MIN || dado > DADO_MAX) {
         return -1;
     }
 
