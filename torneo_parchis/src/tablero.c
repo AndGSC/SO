@@ -3,6 +3,7 @@
 #include "tablero.h"
 #include "sincronizacion.h"
 #include "estadisticas.h"
+#include "ipc_colas.h"
 #include "colores.h"
 #include "config.h"
 
@@ -62,6 +63,10 @@ int calcular_destino(EstadoJuego *estado, int jugador, int ficha, int dado)
 {
     int posicion_actual;
 
+    if (estado == NULL) {
+        return BASE;
+    }
+
     if (jugador < 0 || jugador >= NUM_JUGADORES) {
         return BASE;
     }
@@ -101,6 +106,10 @@ int casilla_es_meta(int posicion)
 
 void enviar_ficha_a_base(EstadoJuego *estado, int jugador, int ficha)
 {
+    if (estado == NULL) {
+        return;
+    }
+
     if (jugador < 0 || jugador >= NUM_JUGADORES) {
         return;
     }
@@ -118,12 +127,21 @@ int mover_en_tablero(EstadoJuego *estado, int jugador, int ficha, int dado)
     int destino;
     int jugador_rival;
     int ficha_rival;
+    char descripcion[TAM_DESCRIPCION_EVENTO];
+
+    if (estado == NULL) {
+        return FALSO;
+    }
 
     if (jugador < 0 || jugador >= NUM_JUGADORES) {
         return FALSO;
     }
 
     if (ficha < 0 || ficha >= NUM_FICHAS) {
+        return FALSO;
+    }
+
+    if (dado < DADO_MIN || dado > DADO_MAX) {
         return FALSO;
     }
 
@@ -140,9 +158,11 @@ int mover_en_tablero(EstadoJuego *estado, int jugador, int ficha, int dado)
 
         if (origen >= 0 && origen < TAM_TABLERO) {
             bloquear_casilla(estado, origen);
+
             estado->casillas[origen].ocupada = FALSO;
             estado->casillas[origen].jugador = SIN_GANADOR;
             estado->casillas[origen].ficha = -1;
+
             desbloquear_casilla(estado, origen);
         }
 
@@ -151,6 +171,14 @@ int mover_en_tablero(EstadoJuego *estado, int jugador, int ficha, int dado)
 
         registrar_movimiento(estado, jugador);
         registrar_meta(estado, jugador);
+
+        snprintf(descripcion,
+                 sizeof(descripcion),
+                 "La ficha %d de %s llego a meta",
+                 ficha,
+                 nombre_jugador(jugador));
+
+        enviar_evento(EVENTO_META, jugador, ficha, descripcion);
 
         salir_zona_meta(estado);
 
@@ -175,6 +203,15 @@ int mover_en_tablero(EstadoJuego *estado, int jugador, int ficha, int dado)
         if (jugador_rival != jugador) {
             enviar_ficha_a_base(estado, jugador_rival, ficha_rival);
             registrar_captura(estado, jugador);
+
+            snprintf(descripcion,
+                     sizeof(descripcion),
+                     "%s capturo la ficha %d de %s",
+                     nombre_jugador(jugador),
+                     ficha_rival,
+                     nombre_jugador(jugador_rival));
+
+            enviar_evento(EVENTO_CAPTURA, jugador, ficha, descripcion);
         } else {
             desbloquear_casillas_movimiento(estado, origen, destino);
 
@@ -183,6 +220,15 @@ int mover_en_tablero(EstadoJuego *estado, int jugador, int ficha, int dado)
             }
 
             registrar_bloqueo(estado, jugador);
+
+            snprintf(descripcion,
+                     sizeof(descripcion),
+                     "La ficha %d de %s no pudo moverse porque la casilla destino esta ocupada por una ficha propia",
+                     ficha,
+                     nombre_jugador(jugador));
+
+            enviar_evento(EVENTO_BLOQUEO, jugador, ficha, descripcion);
+
             return FALSO;
         }
     }
@@ -201,6 +247,16 @@ int mover_en_tablero(EstadoJuego *estado, int jugador, int ficha, int dado)
 
     registrar_movimiento(estado, jugador);
 
+    snprintf(descripcion,
+             sizeof(descripcion),
+             "La ficha %d de %s se movio de %d a %d",
+             ficha,
+             nombre_jugador(jugador),
+             origen,
+             destino);
+
+    enviar_evento(EVENTO_MOVIMIENTO, jugador, ficha, descripcion);
+
     desbloquear_casillas_movimiento(estado, origen, destino);
 
     if (casilla_es_pasillo(destino)) {
@@ -212,6 +268,10 @@ int mover_en_tablero(EstadoJuego *estado, int jugador, int ficha, int dado)
 
 int jugador_gano(EstadoJuego *estado, int jugador)
 {
+    if (estado == NULL) {
+        return FALSO;
+    }
+
     if (jugador < 0 || jugador >= NUM_JUGADORES) {
         return FALSO;
     }
