@@ -7,6 +7,7 @@
 #include "ficha.h"
 #include "tablero.h"
 #include "estadisticas.h"
+#include "ipc_sockets.h"
 #include "colores.h"
 #include "config.h"
 
@@ -30,17 +31,19 @@ void ejecutar_jugador(int id_jugador, EstadoJuego *estado)
     crear_hilos_fichas(id_jugador, estado);
 
     while (estado->juego_terminado == JUEGO_ACTIVO) {
+        esperar_turno_socket(id_jugador);
+
+        if (estado->juego_terminado == JUEGO_TERMINADO) {
+            break;
+        }
+
         procesar_turno_jugador(id_jugador, estado);
 
-        /*
-         * Temporal:
-         * se procesa solo un turno hasta integrar el árbitro,
-         * Round Robin y sockets.
-         */
-        break;
+        enviar_respuesta_socket(id_jugador, "Turno completado");
     }
 
-    printf("Proceso jugador %s finalizado.\n", nombre_jugador(id_jugador));
+    printf("Proceso jugador %s finalizado.\n",
+           nombre_jugador(id_jugador));
 }
 
 void procesar_turno_jugador(int id_jugador, EstadoJuego *estado)
