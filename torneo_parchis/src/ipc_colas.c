@@ -12,9 +12,8 @@
 static int id_cola_mensajes = -1;
 
 /*
- * Se usa IPC_PRIVATE: la cola se crea antes del fork(), por lo que
- * todos los procesos hijos heredan el identificador. Así no hay
- * colisiones con colas residuales de otras ejecuciones.
+ * La cola se crea antes del fork(), por lo que
+ * todos los procesos hijos heredan el identificador.
  */
 void crear_cola_mensajes(void)
 {
