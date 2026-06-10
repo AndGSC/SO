@@ -7,6 +7,11 @@
 #define AMARILLO 3
 
 /*
+ * Código ANSI para restaurar el color normal de la terminal.
+ */
+#define COLOR_RESET "\033[0m"
+
+/*
  * Devuelve el nombre textual del jugador según su identificador.
  *
  * Ejemplos:
@@ -28,5 +33,11 @@ const char *nombre_jugador(int id_jugador);
  * AMARILLO -> 'M'
  */
 char simbolo_jugador(int id_jugador);
+
+/*
+ * Devuelve el código de color ANSI del jugador para la salida
+ * del tablero en la terminal.
+ */
+const char *color_jugador(int id_jugador);
 
 #endif

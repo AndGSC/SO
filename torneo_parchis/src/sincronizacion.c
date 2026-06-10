@@ -32,6 +32,11 @@ void inicializar_sincronizacion(EstadoJuego *estado)
         exit(EXIT_FAILURE);
     }
 
+    if (pthread_mutex_init(&estado->mutex_juego, &attr) != 0) {
+        perror("Error al inicializar mutex de estado del juego");
+        exit(EXIT_FAILURE);
+    }
+
     pthread_mutexattr_destroy(&attr);
 
     if (sem_init(&estado->sem_meta, 1, CAPACIDAD_META) == -1) {
@@ -52,6 +57,7 @@ void destruir_sincronizacion(EstadoJuego *estado)
     }
 
     pthread_mutex_destroy(&estado->mutex_estadisticas);
+    pthread_mutex_destroy(&estado->mutex_juego);
 
     sem_destroy(&estado->sem_meta);
     sem_destroy(&estado->sem_pasillo);
@@ -135,6 +141,16 @@ void bloquear_estadisticas(EstadoJuego *estado)
 void desbloquear_estadisticas(EstadoJuego *estado)
 {
     pthread_mutex_unlock(&estado->mutex_estadisticas);
+}
+
+void bloquear_juego(EstadoJuego *estado)
+{
+    pthread_mutex_lock(&estado->mutex_juego);
+}
+
+void desbloquear_juego(EstadoJuego *estado)
+{
+    pthread_mutex_unlock(&estado->mutex_juego);
 }
 
 void entrar_zona_meta(EstadoJuego *estado)

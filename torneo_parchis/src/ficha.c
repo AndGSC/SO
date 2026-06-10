@@ -7,6 +7,31 @@
 #include "colores.h"
 #include "config.h"
 
+/*
+ * Estado de control local al proceso jugador.
+ *
+ * Coordina al hilo principal del proceso con los 4 hilos ficha:
+ * el hilo principal publica el valor del dado y los hilos ficha
+ * compiten por reclamar el movimiento del turno.
+ */
+typedef struct {
+    pthread_mutex_t mutex;
+    pthread_cond_t cond_orden;
+    pthread_cond_t cond_listo;
+
+    int turno_id;
+    int dado_actual;
+    int movimiento_reclamado;
+    int resultado;
+    int ficha_movida;
+    int fichas_respondieron;
+    int terminar;
+} ControlFichas;
+
+static ControlFichas control;
+static pthread_t hilos[NUM_FICHAS];
+static FichaContexto contextos[NUM_FICHAS];
+
 static int ficha_valida(int id_ficha)
 {
     return id_ficha >= 0 && id_ficha < NUM_FICHAS;
@@ -19,12 +44,24 @@ static int jugador_valido(int id_jugador)
 
 void crear_hilos_fichas(int id_jugador, EstadoJuego *estado)
 {
-    pthread_t hilos[NUM_FICHAS];
-    FichaContexto contextos[NUM_FICHAS];
-
     if (!jugador_valido(id_jugador) || estado == NULL) {
         return;
     }
+
+    if (pthread_mutex_init(&control.mutex, NULL) != 0 ||
+        pthread_cond_init(&control.cond_orden, NULL) != 0 ||
+        pthread_cond_init(&control.cond_listo, NULL) != 0) {
+        perror("Error al inicializar control de hilos ficha");
+        exit(EXIT_FAILURE);
+    }
+
+    control.turno_id = 0;
+    control.dado_actual = 0;
+    control.movimiento_reclamado = FALSO;
+    control.resultado = FALSO;
+    control.ficha_movida = -1;
+    control.fichas_respondieron = 0;
+    control.terminar = FALSO;
 
     for (int i = 0; i < NUM_FICHAS; i++) {
         contextos[i].id_jugador = id_jugador;
@@ -36,24 +73,28 @@ void crear_hilos_fichas(int id_jugador, EstadoJuego *estado)
             exit(EXIT_FAILURE);
         }
     }
-
-    for (int i = 0; i < NUM_FICHAS; i++) {
-        if (pthread_join(hilos[i], NULL) != 0) {
-            perror("Error al esperar hilo de ficha");
-            exit(EXIT_FAILURE);
-        }
-    }
 }
 
+/*
+ * Cada hilo ficha permanece vivo durante toda la partida.
+ *
+ * En cada turno, el hilo principal publica el dado y despierta a los
+ * 4 hilos con un broadcast. Los hilos evalúan en competencia si su
+ * ficha puede moverse; el primero que pueda reclama el movimiento y
+ * lo ejecuta sobre el tablero compartido (tomando los mutex de las
+ * casillas y los semáforos de meta/pasillo). Los demás solo reportan
+ * que ya respondieron al turno.
+ */
 void *ejecutar_ficha(void *arg)
 {
     FichaContexto *ctx = (FichaContexto *) arg;
+    int ultimo_turno = 0;
+    int dado;
+    int resultado;
 
-    if (ctx == NULL) {
-        pthread_exit(NULL);
-    }
-
-    if (!jugador_valido(ctx->id_jugador) || !ficha_valida(ctx->id_ficha)) {
+    if (ctx == NULL ||
+        !jugador_valido(ctx->id_jugador) ||
+        !ficha_valida(ctx->id_ficha)) {
         pthread_exit(NULL);
     }
 
@@ -61,7 +102,109 @@ void *ejecutar_ficha(void *arg)
            nombre_jugador(ctx->id_jugador),
            ctx->id_ficha);
 
+    pthread_mutex_lock(&control.mutex);
+
+    while (1) {
+        while (control.turno_id == ultimo_turno &&
+               control.terminar == FALSO) {
+            pthread_cond_wait(&control.cond_orden, &control.mutex);
+        }
+
+        if (control.terminar == VERDADERO) {
+            break;
+        }
+
+        ultimo_turno = control.turno_id;
+        dado = control.dado_actual;
+
+        if (control.movimiento_reclamado == FALSO &&
+            ficha_puede_mover(ctx->estado,
+                              ctx->id_jugador,
+                              ctx->id_ficha,
+                              dado) == VERDADERO) {
+
+            control.movimiento_reclamado = VERDADERO;
+
+            /*
+             * El movimiento sobre el tablero compartido se hace sin
+             * el mutex de control para no bloquear a los demás hilos
+             * mientras se toman los mutex de casilla y semáforos.
+             */
+            pthread_mutex_unlock(&control.mutex);
+
+            resultado = mover_ficha(ctx, dado);
+
+            pthread_mutex_lock(&control.mutex);
+
+            if (resultado == VERDADERO) {
+                control.resultado = VERDADERO;
+                control.ficha_movida = ctx->id_ficha;
+            }
+        }
+
+        control.fichas_respondieron++;
+
+        if (control.fichas_respondieron == NUM_FICHAS) {
+            pthread_cond_signal(&control.cond_listo);
+        }
+    }
+
+    pthread_mutex_unlock(&control.mutex);
+
     pthread_exit(NULL);
+}
+
+int ejecutar_turno_fichas(int dado, int *ficha_movida)
+{
+    int resultado;
+
+    if (dado < DADO_MIN || dado > DADO_MAX) {
+        return FALSO;
+    }
+
+    pthread_mutex_lock(&control.mutex);
+
+    control.dado_actual = dado;
+    control.movimiento_reclamado = FALSO;
+    control.resultado = FALSO;
+    control.ficha_movida = -1;
+    control.fichas_respondieron = 0;
+    control.turno_id++;
+
+    pthread_cond_broadcast(&control.cond_orden);
+
+    while (control.fichas_respondieron < NUM_FICHAS) {
+        pthread_cond_wait(&control.cond_listo, &control.mutex);
+    }
+
+    resultado = control.resultado;
+
+    if (ficha_movida != NULL) {
+        *ficha_movida = control.ficha_movida;
+    }
+
+    pthread_mutex_unlock(&control.mutex);
+
+    return resultado;
+}
+
+void finalizar_hilos_fichas(void)
+{
+    pthread_mutex_lock(&control.mutex);
+    control.terminar = VERDADERO;
+    pthread_cond_broadcast(&control.cond_orden);
+    pthread_mutex_unlock(&control.mutex);
+
+    for (int i = 0; i < NUM_FICHAS; i++) {
+        if (pthread_join(hilos[i], NULL) != 0) {
+            perror("Error al esperar hilo de ficha");
+            exit(EXIT_FAILURE);
+        }
+    }
+
+    pthread_mutex_destroy(&control.mutex);
+    pthread_cond_destroy(&control.cond_orden);
+    pthread_cond_destroy(&control.cond_listo);
 }
 
 int mover_ficha(FichaContexto *ctx, int dado)

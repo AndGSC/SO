@@ -1,0 +1,59 @@
+DIAGRAMA DE PROCESOS E HILOS - TORNEO DE PARCHIS
+=================================================
+
+                        +--------------------------------------+
+                        |   PROCESO PADRE (Arbitro/Scheduler)  |
+                        |                                      |
+                        |  - Crea memoria compartida (mmap)    |
+                        |  - Crea pipes, cola de mensajes y    |
+                        |    sockets TCP (uno por jugador)     |
+                        |  - Asigna turnos con Round Robin     |
+                        |  - Recoge estadisticas (pipes) y     |
+                        |    espera a los hijos (waitpid)      |
+                        +-------------------+------------------+
+                                            |
+                 fork() x4                  |
+       +------------------+-----------------+----------------+
+       |                  |                 |                |
++------v------+    +------v------+   +------v------+   +-----v-------+
+|  PROCESO    |    |  PROCESO    |   |  PROCESO    |   |  PROCESO    |
+|  Jugador    |    |  Jugador    |   |  Jugador    |   |  Jugador    |
+|  ROJO       |    |  VERDE      |   |  AZUL       |   |  AMARILLO   |
++------+------+    +------+------+   +------+------+   +------+------+
+       |                  |                 |                 |
+       | pthread_create() x4 (en cada proceso jugador)        |
+       |                  |                 |                 |
+  +----+----+        +----+----+       +----+----+       +----+----+
+  | | | | |          | | | | |         | | | | |         | | | | |
+  v v v v            v v v v           v v v v           v v v v
+ Hilo Ficha 0..3    Hilo Ficha 0..3   Hilo Ficha 0..3   Hilo Ficha 0..3
+
+ Cada hilo ficha vive durante toda la partida. En cada turno los 4
+ hilos del jugador despiertan (broadcast de variable de condicion),
+ compiten por reclamar el movimiento y el ganador de la competencia
+ mueve su ficha sobre el tablero compartido.
+
+
+COMUNICACION Y SINCRONIZACION
+=============================
+
+  Arbitro <--- sockets TCP (loopback, un puerto por jugador) ---> Jugadores
+      mensajes de control: "TURNO <color>" / respuesta del jugador
+
+  Jugadores --- cola de mensajes System V (msgsnd/msgrcv) ---> Arbitro
+      eventos del juego: movimientos, capturas, llegadas a meta
+
+  Jugadores --- pipes (un pipe por hijo) ---> Arbitro
+      estadisticas finales de cada proceso al terminar la partida
+
+  MEMORIA COMPARTIDA (mmap MAP_SHARED | MAP_ANONYMOUS):
+      EstadoJuego: tablero (40 casillas), posiciones de fichas,
+      estadisticas, mutex y semaforos.
+
+  SINCRONIZACION:
+      - 1 mutex por casilla (pthread_mutex_t, PTHREAD_PROCESS_SHARED)
+      - mutex de estadisticas y mutex del estado del juego
+      - semaforo sem_meta (zona de meta) y sem_pasillo (pasillos
+        estrechos: casillas 10-11, 20-21, 30-31)
+      - variables de condicion locales a cada proceso jugador para
+        coordinar el hilo principal con sus 4 hilos ficha

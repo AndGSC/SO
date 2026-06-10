@@ -15,6 +15,9 @@ void desbloquear_casillas_movimiento(EstadoJuego *estado, int origen, int destin
 void bloquear_estadisticas(EstadoJuego *estado);
 void desbloquear_estadisticas(EstadoJuego *estado);
 
+void bloquear_juego(EstadoJuego *estado);
+void desbloquear_juego(EstadoJuego *estado);
+
 void entrar_zona_meta(EstadoJuego *estado);
 void salir_zona_meta(EstadoJuego *estado);
 

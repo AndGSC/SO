@@ -28,18 +28,32 @@ void inicializar_tablero(EstadoJuego *estado)
     estado->turno_actual = 0;
 }
 
+/*
+ * Dibuja el tablero en ASCII art. Las casillas de pasillo estrecho
+ * se marcan con '*' y cada ficha se muestra con el color ANSI de su
+ * jugador. Tambien se muestra cuantas fichas tiene cada jugador en
+ * base, en el tablero y en meta.
+ */
 void imprimir_tablero(EstadoJuego *estado)
 {
-    printf("\n================ TABLERO ================\n");
+    int en_base;
+    int en_tablero;
+
+    printf("\n+======================= TABLERO =======================+\n");
 
     for (int i = 0; i < TAM_TABLERO; i++) {
+        char marca = casilla_es_pasillo(i) ? '*' : ' ';
+
         if (estado->casillas[i].ocupada == VERDADERO) {
-            printf("[%02d:%c%d] ",
+            printf("[%02d%c%s%c%d%s] ",
                    i,
+                   marca,
+                   color_jugador(estado->casillas[i].jugador),
                    simbolo_jugador(estado->casillas[i].jugador),
-                   estado->casillas[i].ficha);
+                   estado->casillas[i].ficha,
+                   COLOR_RESET);
         } else {
-            printf("[%02d:  ] ", i);
+            printf("[%02d%c..] ", i, marca);
         }
 
         if ((i + 1) % 5 == 0) {
@@ -47,16 +61,33 @@ void imprimir_tablero(EstadoJuego *estado)
         }
     }
 
-    printf("\nMeta:\n");
+    printf("(* = pasillo estrecho controlado por semaforo)\n\n");
+
+    printf("%-10s %6s %9s %6s\n", "Jugador", "Base", "Tablero", "Meta");
 
     for (int jugador = 0; jugador < NUM_JUGADORES; jugador++) {
-        printf("  %s: %d/%d\n",
+        en_base = 0;
+        en_tablero = 0;
+
+        for (int ficha = 0; ficha < NUM_FICHAS; ficha++) {
+            if (estado->posiciones[jugador][ficha] == BASE) {
+                en_base++;
+            } else if (estado->posiciones[jugador][ficha] != META) {
+                en_tablero++;
+            }
+        }
+
+        printf("%s%-10s%s %6d %9d %3d/%d\n",
+               color_jugador(jugador),
                nombre_jugador(jugador),
+               COLOR_RESET,
+               en_base,
+               en_tablero,
                estado->fichas_en_meta[jugador],
                NUM_FICHAS);
     }
 
-    printf("=========================================\n");
+    printf("+=======================================================+\n");
 }
 
 int calcular_destino(EstadoJuego *estado, int jugador, int ficha, int dado)
@@ -90,6 +121,59 @@ int calcular_destino(EstadoJuego *estado, int jugador, int ficha, int dado)
     }
 
     return posicion_actual + dado;
+}
+
+/*
+ * Verifica si una ficha tiene un movimiento posible con el dado dado.
+ * La lectura de la casilla destino se hace con su mutex tomado para
+ * no leer un estado intermedio de otro movimiento en curso.
+ */
+int ficha_puede_mover(EstadoJuego *estado, int jugador, int ficha, int dado)
+{
+    int posicion;
+    int destino;
+    int puede;
+
+    if (estado == NULL) {
+        return FALSO;
+    }
+
+    if (jugador < 0 || jugador >= NUM_JUGADORES) {
+        return FALSO;
+    }
+
+    if (ficha < 0 || ficha >= NUM_FICHAS) {
+        return FALSO;
+    }
+
+    if (dado < DADO_MIN || dado > DADO_MAX) {
+        return FALSO;
+    }
+
+    posicion = estado->posiciones[jugador][ficha];
+
+    if (posicion == META) {
+        return FALSO;
+    }
+
+    destino = calcular_destino(estado, jugador, ficha, dado);
+
+    if (destino == META) {
+        return VERDADERO;
+    }
+
+    if (destino < 0 || destino >= TAM_TABLERO) {
+        return FALSO;
+    }
+
+    bloquear_casilla(estado, destino);
+
+    puede = (estado->casillas[destino].ocupada == FALSO ||
+             estado->casillas[destino].jugador != jugador);
+
+    desbloquear_casilla(estado, destino);
+
+    return puede;
 }
 
 int casilla_es_pasillo(int posicion)
@@ -183,8 +267,10 @@ int mover_en_tablero(EstadoJuego *estado, int jugador, int ficha, int dado)
         salir_zona_meta(estado);
 
         if (jugador_gano(estado, jugador) == VERDADERO) {
+            bloquear_juego(estado);
             estado->juego_terminado = JUEGO_TERMINADO;
             estado->ganador = jugador;
+            desbloquear_juego(estado);
         }
 
         return VERDADERO;

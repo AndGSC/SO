@@ -42,15 +42,21 @@ void ejecutar_jugador(int id_jugador, EstadoJuego *estado)
         enviar_respuesta_socket(id_jugador, "Turno completado");
     }
 
+    finalizar_hilos_fichas();
+
     printf("Proceso jugador %s finalizado.\n",
            nombre_jugador(id_jugador));
 }
 
+/*
+ * El hilo principal del proceso jugador lanza el dado y delega el
+ * movimiento a los hilos ficha: los 4 hilos compiten por reclamar
+ * el movimiento del turno sobre el tablero compartido.
+ */
 void procesar_turno_jugador(int id_jugador, EstadoJuego *estado)
 {
     int dado;
     int ficha;
-    FichaContexto ctx_ficha;
 
     if (!jugador_valido(id_jugador) || estado == NULL) {
         return;
@@ -66,29 +72,15 @@ void procesar_turno_jugador(int id_jugador, EstadoJuego *estado)
            nombre_jugador(id_jugador),
            dado);
 
-    ficha = seleccionar_ficha(id_jugador, estado, dado);
+    ficha = -1;
 
-    if (ficha == -1) {
-        printf("Jugador %s no tiene fichas disponibles para mover.\n",
-               nombre_jugador(id_jugador));
-
-        registrar_bloqueo(estado, id_jugador);
-        registrar_turno(estado, id_jugador);
-        return;
-    }
-
-    ctx_ficha.id_jugador = id_jugador;
-    ctx_ficha.id_ficha = ficha;
-    ctx_ficha.estado = estado;
-
-    if (mover_ficha(&ctx_ficha, dado) == VERDADERO) {
+    if (ejecutar_turno_fichas(dado, &ficha) == VERDADERO) {
         printf("Jugador %s movio la ficha %d.\n",
                nombre_jugador(id_jugador),
                ficha);
     } else {
-        printf("Jugador %s no pudo mover la ficha %d.\n",
-               nombre_jugador(id_jugador),
-               ficha);
+        printf("Jugador %s no pudo mover ninguna ficha.\n",
+               nombre_jugador(id_jugador));
 
         registrar_bloqueo(estado, id_jugador);
     }
@@ -99,41 +91,4 @@ void procesar_turno_jugador(int id_jugador, EstadoJuego *estado)
 int lanzar_dado(void)
 {
     return (rand() % DADO_MAX) + DADO_MIN;
-}
-
-int seleccionar_ficha(int id_jugador, EstadoJuego *estado, int dado)
-{
-    int posicion;
-    int destino;
-
-    if (!jugador_valido(id_jugador) || estado == NULL) {
-        return -1;
-    }
-
-    if (dado < DADO_MIN || dado > DADO_MAX) {
-        return -1;
-    }
-
-    for (int ficha = 0; ficha < NUM_FICHAS; ficha++) {
-        posicion = estado->posiciones[id_jugador][ficha];
-
-        if (posicion == META) {
-            continue;
-        }
-
-        destino = calcular_destino(estado, id_jugador, ficha, dado);
-
-        if (destino == META) {
-            return ficha;
-        }
-
-        if (destino >= 0 && destino < TAM_TABLERO) {
-            if (estado->casillas[destino].ocupada == FALSO ||
-                estado->casillas[destino].jugador != id_jugador) {
-                return ficha;
-            }
-        }
-    }
-
-    return -1;
 }

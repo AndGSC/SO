@@ -22,7 +22,7 @@
  * Límite máximo de turnos para evitar ejecuciones infinitas
  * en caso de que ningún jugador gane.
  */
-#define MAX_TURNOS 300
+#define MAX_TURNOS 1000
 
 /*
  * Capacidad de las zonas especiales controladas con semáforos binarios.

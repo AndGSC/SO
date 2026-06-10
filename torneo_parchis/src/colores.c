@@ -43,3 +43,23 @@ char simbolo_jugador(int id_jugador)
             return '?';
     }
 }
+
+const char *color_jugador(int id_jugador)
+{
+    switch (id_jugador) {
+        case ROJO:
+            return "\033[1;31m";
+
+        case VERDE:
+            return "\033[1;32m";
+
+        case AZUL:
+            return "\033[1;34m";
+
+        case AMARILLO:
+            return "\033[1;33m";
+
+        default:
+            return COLOR_RESET;
+    }
+}
