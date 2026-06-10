@@ -7,13 +7,6 @@
 #include "colores.h"
 #include "config.h"
 
-/*
- * Estado de control local al proceso jugador.
- *
- * Coordina al hilo principal del proceso con los 4 hilos ficha:
- * el hilo principal publica el valor del dado y los hilos ficha
- * compiten por reclamar el movimiento del turno.
- */
 typedef struct {
     pthread_mutex_t mutex;
     pthread_cond_t cond_orden;
@@ -75,16 +68,6 @@ void crear_hilos_fichas(int id_jugador, EstadoJuego *estado)
     }
 }
 
-/*
- * Cada hilo ficha permanece vivo durante toda la partida.
- *
- * En cada turno, el hilo principal publica el dado y despierta a los
- * 4 hilos con un broadcast. Los hilos evalúan en competencia si su
- * ficha puede moverse; el primero que pueda reclama el movimiento y
- * lo ejecuta sobre el tablero compartido (tomando los mutex de las
- * casillas y los semáforos de meta/pasillo). Los demás solo reportan
- * que ya respondieron al turno.
- */
 void *ejecutar_ficha(void *arg)
 {
     FichaContexto *ctx = (FichaContexto *) arg;
@@ -124,12 +107,6 @@ void *ejecutar_ficha(void *arg)
                               dado) == VERDADERO) {
 
             control.movimiento_reclamado = VERDADERO;
-
-            /*
-             * El movimiento sobre el tablero compartido se hace sin
-             * el mutex de control para no bloquear a los demás hilos
-             * mientras se toman los mutex de casilla y semáforos.
-             */
             pthread_mutex_unlock(&control.mutex);
 
             resultado = mover_ficha(ctx, dado);
