@@ -19,11 +19,6 @@ const char *nombre_jugador(int id_jugador)
             return "Desconocido";
     }
 }
-
-/*
- * Devuelve un símbolo de un solo carácter para representar
- * al jugador en la salida del tablero.
- */
 char simbolo_jugador(int id_jugador)
 {
     switch (id_jugador) {
