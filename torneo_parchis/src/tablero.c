@@ -28,12 +28,7 @@ void inicializar_tablero(EstadoJuego *estado)
     estado->turno_actual = 0;
 }
 
-/*
- * Dibuja el tablero en ASCII art. Las casillas de pasillo estrecho
- * se marcan con '*' y cada ficha se muestra con el color ANSI de su
- * jugador. Tambien se muestra cuantas fichas tiene cada jugador en
- * base, en el tablero y en meta.
- */
+
 void imprimir_tablero(EstadoJuego *estado)
 {
     int en_base;
