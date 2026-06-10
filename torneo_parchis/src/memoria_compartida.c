@@ -7,8 +7,6 @@
 
 /*
  * Crea la memoria compartida donde se almacenará el EstadoJuego.
- *
- * Se usa mmap() con:
  *   MAP_SHARED    (la memoria será compartida entre procesos)
  *   MAP_ANONYMOUS (no se asocia a ningún archivo físico)
  */
