@@ -12,10 +12,6 @@
 const char *nombre_jugador(int id_jugador);
 
 /*
- * Devuelve un símbolo de un solo carácter para representar
- * al jugador en el tablero ASCII.
- *
- * Ejemplos:
  * ROJO     -> 'R'
  * VERDE    -> 'V'
  * AZUL     -> 'A'
