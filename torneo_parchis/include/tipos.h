@@ -31,14 +31,10 @@ typedef struct {
 
     pthread_mutex_t mutex_casilla[TAM_TABLERO];
 
-    /*
-     * Protege modificaciones concurrentes sobre las estadísticas.
-     */
     pthread_mutex_t mutex_estadisticas;
 
     /*
-     * Protege las escrituras sobre el estado global del juego
-     * (juego_terminado y ganador).
+     * Protege las escrituras sobre el estado global del juego (juego_terminado y ganador)
      */
     pthread_mutex_t mutex_juego;
 
