@@ -3,9 +3,6 @@
 
 #include "tipos.h"
 
-/*
- * Inicializa en cero las estadísticas de todos los jugadores.
- */
 void inicializar_estadisticas(EstadoJuego *estado);
 
 void registrar_movimiento(EstadoJuego *estado, int jugador);
