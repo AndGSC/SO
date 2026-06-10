@@ -118,11 +118,6 @@ int calcular_destino(EstadoJuego *estado, int jugador, int ficha, int dado)
     return posicion_actual + dado;
 }
 
-/*
- * Verifica si una ficha tiene un movimiento posible con el dado dado.
- * La lectura de la casilla destino se hace con su mutex tomado para
- * no leer un estado intermedio de otro movimiento en curso.
- */
 int ficha_puede_mover(EstadoJuego *estado, int jugador, int ficha, int dado)
 {
     int posicion;
