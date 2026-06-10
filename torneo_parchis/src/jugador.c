@@ -48,11 +48,7 @@ void ejecutar_jugador(int id_jugador, EstadoJuego *estado)
            nombre_jugador(id_jugador));
 }
 
-/*
- * El hilo principal del proceso jugador lanza el dado y delega el
- * movimiento a los hilos ficha: los 4 hilos compiten por reclamar
- * el movimiento del turno sobre el tablero compartido.
- */
+
 void procesar_turno_jugador(int id_jugador, EstadoJuego *estado)
 {
     int dado;
