@@ -9,13 +9,16 @@
 #include "colores.h"
 #include "config.h"
 
-#define CLAVE_COLA 0x1234
-
 static int id_cola_mensajes = -1;
 
+/*
+ * Se usa IPC_PRIVATE: la cola se crea antes del fork(), por lo que
+ * todos los procesos hijos heredan el identificador. Así no hay
+ * colisiones con colas residuales de otras ejecuciones.
+ */
 void crear_cola_mensajes(void)
 {
-    id_cola_mensajes = msgget(CLAVE_COLA, IPC_CREAT | 0666);
+    id_cola_mensajes = msgget(IPC_PRIVATE, IPC_CREAT | 0600);
 
     if (id_cola_mensajes == -1) {
         perror("Error al crear cola de mensajes");

@@ -25,6 +25,12 @@ int calcular_destino(EstadoJuego *estado, int jugador, int ficha, int dado);
 int mover_en_tablero(EstadoJuego *estado, int jugador, int ficha, int dado);
 
 /*
+ * Verifica si una ficha tiene un movimiento posible con el dado.
+ * Lee la casilla destino con su mutex tomado.
+ */
+int ficha_puede_mover(EstadoJuego *estado, int jugador, int ficha, int dado);
+
+/*
  * Indica si una posición pertenece a un pasillo estrecho.
  */
 int casilla_es_pasillo(int posicion);

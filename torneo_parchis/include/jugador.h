@@ -18,10 +18,4 @@ void procesar_turno_jugador(int id_jugador, EstadoJuego *estado);
  */
 int lanzar_dado(void);
 
-/*
- * Selecciona una ficha válida para mover.
- * Retorna el índice de la ficha seleccionada o -1 si no hay ficha disponible.
- */
-int seleccionar_ficha(int id_jugador, EstadoJuego *estado, int dado);
-
 #endif

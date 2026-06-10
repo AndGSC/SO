@@ -4,6 +4,7 @@
 #include "ipc_sockets.h"
 #include "ipc_colas.h"
 #include "tablero.h"
+#include "sincronizacion.h"
 #include "estadisticas.h"
 #include "colores.h"
 #include "config.h"
@@ -25,8 +26,6 @@ void ejecutar_arbitro(EstadoJuego *estado)
     } else {
         printf("\nEl torneo finalizo sin ganador.\n");
     }
-
-    imprimir_estadisticas_finales(estado);
 }
 
 void ejecutar_round_robin(EstadoJuego *estado)
@@ -66,8 +65,10 @@ void ejecutar_round_robin(EstadoJuego *estado)
     }
 
     if (turno >= MAX_TURNOS && estado->juego_terminado != JUEGO_TERMINADO) {
+        bloquear_juego(estado);
         estado->juego_terminado = JUEGO_TERMINADO;
         estado->ganador = SIN_GANADOR;
+        desbloquear_juego(estado);
     }
 }
 
@@ -110,8 +111,10 @@ void finalizar_juego(EstadoJuego *estado, int ganador)
         return;
     }
 
+    bloquear_juego(estado);
     estado->juego_terminado = JUEGO_TERMINADO;
     estado->ganador = ganador;
+    desbloquear_juego(estado);
 
     if (ganador != SIN_GANADOR) {
         printf("\nEl jugador %s ha ganado el torneo.\n",

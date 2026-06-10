@@ -36,6 +36,12 @@ typedef struct {
      */
     pthread_mutex_t mutex_estadisticas;
 
+    /*
+     * Protege las escrituras sobre el estado global del juego
+     * (juego_terminado y ganador).
+     */
+    pthread_mutex_t mutex_juego;
+
     sem_t sem_meta;
     sem_t sem_pasillo;
 
